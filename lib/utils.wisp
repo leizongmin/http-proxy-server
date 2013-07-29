@@ -58,17 +58,28 @@
     (parse-connect-request s)
     (parse-other-request s)))
 
+(defn- ^String modify-headers-connection
+  "替换connection头"
+  [^String h]
+  (set! h (.replace h (RegExp "(proxy\-)?connection\:.+\r\n" "ig") ""))
+  (set! h (.replace h (RegExp "Keep\-Alive\:.+\r\n" "g") ""))
+  (.replace h "\r\n" "\r\nConnection: close\r\n"))
+
+(defn- ^String modify-headers-path
+  "替换网址格式(去掉域名部分)"
+  [^Object req ^String header]
+  (def url (.replace (:path req) #"http\:\/\/[^\/]+" ""))
+  (if (!= (:path req) url)
+    (.replace header (:path req) url)
+    header))
+
 (defn modify-headers
   "如果请求不是CONNECT方法（GET, POST），那么替换掉头部的一些东西"
-  [^Buffer b]
+  [^Object req ^Buffer b]
   (def i (find-body b))
-  (if (< i 0) (set! i (.-length b)))
+  (if (< i 0) (set! i (:length b)))
   (def header (.to-string (.slice b 0 i)))
-  ;; 替换connection头
-  (set! header
-    (.replace (.replace (.replace )))
-
-
-
-
- 
+  (set! header (modify-headers-connection header))
+  (if (== (:httpVersion req) "1.1")
+    (set! header (modify-headers-path req header)))
+  (.concat Buffer [(Buffer. header "utf8") (.slice b i)]))
