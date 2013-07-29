@@ -57,3 +57,18 @@
   (if (== m "CONNECT")
     (parse-connect-request s)
     (parse-other-request s)))
+
+(defn modify-headers
+  "如果请求不是CONNECT方法（GET, POST），那么替换掉头部的一些东西"
+  [^Buffer b]
+  (def i (find-body b))
+  (if (< i 0) (set! i (.-length b)))
+  (def header (.to-string (.slice b 0 i)))
+  ;; 替换connection头
+  (set! header
+    (.replace (.replace (.replace )))
+
+
+
+
+ 
