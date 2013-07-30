@@ -51,6 +51,7 @@
 
 (defn- ^Object parse-connect-request
   [^String s]
+  (debug "parse-connect-request： %s" s)
   (def arr (.match s **REQUEST-MATCH-1**))
   (if (>= 5 (.-length arr))
     {:method (get arr 1)
@@ -61,6 +62,7 @@
 
 (defn- ^Object parse-other-request
   [^String s]
+  (debug "parse-other-request: %s" s)
   (def arr (.match s **REQUEST-MATCH-2**))
   (if (>= (.-length arr) 4)
     (let [host (get (.match s **REQUEST-MATCH-3**) 1)]
@@ -88,21 +90,24 @@
 (defn- ^String modify-headers-connection
   "替换connection头"
   [^String h]
+  (debug "modify-headers-connection: %s" h)
   (set! h (.replace h (RegExp "(proxy\\-)?connection\\:.+\\r\\n" "ig") ""))
   (set! h (.replace h (RegExp "Keep\\-Alive\\:.+\\r\\n" "i") ""))
   (.replace h "\r\n" "\r\nConnection: close\r\n"))
 
 (defn- ^String modify-headers-path
   "替换网址格式(去掉域名部分)"
-  [^Object req ^String header]
+  [^Object req ^String h]
+  (debug "modify-headers-path: %s" h)
   (def url (.replace (:path req) **REQUEST-MATCH-5** ""))
   (if (== (:path req) url)
-    header
-    (.replace header (:path req) url)))
+    h
+    (.replace h (:path req) url)))
 
 (defn ^String modify-headers
   "如果请求不是CONNECT方法（GET, POST），那么替换掉头部的一些东西"
   [^Object req ^Buffer b]
+  (debug "modify-headers")
   (def i (find-body b))
   (if (< i 0) (set! i (:length b)))
   (def header (.to-string (.slice b 0 i)))
