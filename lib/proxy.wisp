@@ -1,7 +1,7 @@
 (ns proxy.proxy
   "Proxy"
   (:require [net]
-            [proxy.utils :refer [debug log modify-headers find-body parse-request]]))
+            [proxy.utils :refer [debug log dump dump-error modify-headers find-body parse-request]]))
 
 (defn proxy
   "从http请求头部取得请求信息后，继续监听浏览器发送数据，同时连接目标服务器，并把目标服务器的数据传给浏览器"
@@ -19,9 +19,9 @@
   (.pipe s c)
   ;; 异常
   (.on c "error" (fn [err]
-    (log err)))
+    (dump-error err)))
   (.on s "error" (fn [err]
-    (log err)))
+    (dump-error err)))
 
   (if (== (:method req) "CONNECT")
     (.write c "HTTP/1.1 200 Connection established\r\nConnection: close\r\n\r\n")
@@ -38,6 +38,7 @@
       (set! b (.concat Buffer [b data]))
       (if (== (find-body b) -1) nil
         (let [req (parse-request b)]
+          (dump req)
           (if req
             (.remove-all-listeners c "data")
             (proxy req c b)))))))))

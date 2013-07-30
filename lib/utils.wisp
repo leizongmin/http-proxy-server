@@ -1,6 +1,7 @@
 (ns proxy.utils
   "Proxy Utils"
-  (:require [Debug]))
+  (:require [debug :as Debug]
+            [util]))
 
 (def ^:private **REQUEST-MATCH-1** #"^([A-Z]+)\s([^\:\s]+)\:(\d+)\sHTTP\/(\d\.\d)")
 (def ^:private **REQUEST-MATCH-2** #"^([A-Z]+)\s([^\s]+)\sHTTP\/(\d\.\d)")
@@ -9,7 +10,17 @@
 (def ^:private **REQUEST-MATCH-5** #"http\:\/\/[^\/]+")
 
 (def debug (Debug "proxy"))
-(def log console.log)
+(defn log []
+  (def args (.call (:slice (:prototype Array)) arguments))
+  (def f (.shift args))
+  (set! f (str "%s - " f))
+  (.unshift args (.to-locale-time-string (Date.)))
+  (.unshift args f)
+  (.apply (:log console) console args))
+
+(defn dump [obj] (log (.format util obj)))
+
+(defn dump-error [err] (log (or (:stack err) (:to-string err))))
 
 (defn each-keys
   "遍历对象"
@@ -85,9 +96,9 @@
   "替换网址格式(去掉域名部分)"
   [^Object req ^String header]
   (def url (.replace (:path req) **REQUEST-MATCH-5** ""))
-  (if (== (:path req) url) nil
-    (.replace header (:path req) url)
-    header))
+  (if (== (:path req) url)
+    header
+    (.replace header (:path req) url)))
 
 (defn ^String modify-headers
   "如果请求不是CONNECT方法（GET, POST），那么替换掉头部的一些东西"
