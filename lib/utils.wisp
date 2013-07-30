@@ -114,4 +114,4 @@
   (set! header (modify-headers-connection header))
   (if (== (:httpVersion req) "1.1")
     (set! header (modify-headers-path req header)))
-  (.concat Buffer [(Buffer. header "utf8") (.slice b i)]))
+  {:request (parse-request header) :buffer (.concat Buffer [(Buffer. header "utf8") (.slice b i)])})

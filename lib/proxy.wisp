@@ -3,14 +3,29 @@
   (:require [net]
             [proxy.utils :refer [debug log dump dump-error modify-headers find-body parse-request]]))
 
+(def **PROXY-ID** 0)
+
+(defn- assign-proxy-id
+  "分配一个代理ID"
+  []
+  (set! **PROXY-ID** (+ **PROXY-ID** 1))
+  **PROXY-ID**)
+
 (defn proxy
   "从http请求头部取得请求信息后，继续监听浏览器发送数据，同时连接目标服务器，并把目标服务器的数据传给浏览器"
   [^Object req ^Connection c ^Buffer b]
-  (debug (str "proxy: " (:method req) " " (:host req) ":" (:port req)))
   
   ;; 如果请求不是CONNECT方法（GET, POST），那么替换掉头部的一些东西
   (if (== (:method req) "CONNECT") nil
-    (set! b (modify-headers req b)))
+    (let [info (modify-headers req b)]
+      (set! req (:request info))
+      (set! b (:buffer info))))
+
+  (def id (assign-proxy-id))
+  (def timestamp (.now Date))
+  (def log2 (fn [s]
+    (log (str "#" id ": +" (- (.now Date) timestamp) "ms " s))))
+  (log2 (str (:method req) " http://" (:host req) ":" (:port req) (:path req)))
 
   ;; 建立到目标服务器的连接
   (def s (.create-connection net (:port req) (:host req)))
@@ -19,9 +34,15 @@
   (.pipe s c)
   ;; 异常
   (.on c "error" (fn [err]
-    (dump-error err)))
+    (log2 (str err))))
   (.on s "error" (fn [err]
-    (dump-error err)))
+    (log2 (str err))))
+  (.on s "data" (fn [b]
+    (log2 (str "recieved " (:length b) "bytes"))))
+  (.on s "close" (fn [b]
+    (log2 "remote closed")))
+  (.on c "close" (fn [b]
+    (log2 "client closed")))
 
   (if (== (:method req) "CONNECT")
     (.write c "HTTP/1.1 200 Connection established\r\nConnection: close\r\n\r\n")
