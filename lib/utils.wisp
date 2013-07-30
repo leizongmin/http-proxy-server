@@ -1,11 +1,21 @@
 (ns proxy.utils
-  "Proxy Utils")
+  "Proxy Utils"
+  (:require [Debug]))
 
 (def ^:private **REQUEST-MATCH-1** #"^([A-Z]+)\s([^\:\s]+)\:(\d+)\sHTTP\/(\d\.\d)")
 (def ^:private **REQUEST-MATCH-2** #"^([A-Z]+)\s([^\s]+)\sHTTP\/(\d\.\d)")
 (def ^:private **REQUEST-MATCH-3** #"Host\:\s+([^\n\s\r]+)")
 (def ^:private **REQUEST-MATCH-4** #"^([A-Z]+)\s")
 (def ^:private **REQUEST-MATCH-5** #"http\:\/\/[^\/]+")
+
+(def debug (Debug "proxy"))
+(def log console.log)
+
+(defn each-keys
+  "遍历对象"
+  [^Object obj f]
+  (.for-each (.keys Object obj) (fn [k]
+    (f k (get obj k) obj))))
 
 (defn- ^Boolean body-end?
   "判断是否为\r\n\r\n"
@@ -75,7 +85,7 @@
   "替换网址格式(去掉域名部分)"
   [^Object req ^String header]
   (def url (.replace (:path req) **REQUEST-MATCH-5** ""))
-  (if (!= (:path req) url)
+  (if (== (:path req) url) nil
     (.replace header (:path req) url)
     header))
 

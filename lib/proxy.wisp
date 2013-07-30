@@ -1,10 +1,7 @@
 (ns proxy.proxy
   "Proxy"
-  (:require [proxy.utils :refer [modify-headers find-body parse-request]]
-            [Debug]))
-
-(def ^:private debug (Debug "proxy"))
-(def ^:private log console.log)
+  (:require [net]
+            [proxy.utils :refer [debug log modify-headers find-body parse-request]]))
 
 (defn proxy
   "从http请求头部取得请求信息后，继续监听浏览器发送数据，同时连接目标服务器，并把目标服务器的数据传给浏览器"
@@ -12,7 +9,7 @@
   (debug (str (:method req) " " (:host req) ":" (:port req)))
   
   ;; 如果请求不是CONNECT方法（GET, POST），那么替换掉头部的一些东西
-  (if (not (== (:method req) "CONNECT"))
+  (if (== (:method req) "CONNECT") nil
     (set! b (modify-headers req b)))
 
   ;; 建立到目标服务器的连接
@@ -39,9 +36,8 @@
     (def b (Buffer. 0))
     (.on c "data" (fn [data]
       (set! b (.concat Buffer [b data]))
-      (if (>= (find-body b) 0)
+      (if (== (find-body b) -1) nil
         (let [req (parse-request b)]
           (if req
             (.remove-all-listeners c "data")
-            (proxy req c b))))))))
-  nil)
+            (proxy req c b)))))))))
